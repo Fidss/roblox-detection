@@ -1,21 +1,21 @@
-from flask import Flask, request, jsonify, render_template_string
-import os
 import time
-import redis
+from flask import Flask, request, jsonify, render_template_string
+from supabase import create_client, Client
 
 app = Flask(__name__)
 
-# Konek ke Vercel KV (Redis)
-REDIS_URL = os.environ.get("KV_URL")
-if REDIS_URL and REDIS_URL.startswith("redis://"):
-    REDIS_URL = REDIS_URL.replace("redis://", "rediss://", 1)
+# ==================== CONFIGURATION (DEVELOPMENT ONLY) ====================
+# Taruh link dan anon key public Supabase kamu di bawah ini:
+SUPABASE_URL = "https://lgnzuhfangjeqbosquaa.supabase.co" 
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxnbnp1aGZhbmdqZXFib3NxdWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExODY4MzUsImV4cCI6MjA5Njc2MjgzNX0.-9i4JDnFweYUjGCTRJ0-cuhOAXpl97pIDarO3NvSV-s"
+# ==========================================================================
 
-db = redis.Redis.from_url(REDIS_URL, decode_responses=True) if REDIS_URL else None
+# Inisialisasi client Supabase
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Threshold Waktu: Jika akun tidak kirim ping lebih dari 45 detik, dianggap offline
 TIMEOUT_THRESHOLD = 45 
 
-# HTML Template dengan Tailwind CSS (Dark Mode Admin Dashboard)
+# HTML Dashboard UI
 DASHBOARD_HTML = """
 <!DOCTYPE html>
 <html lang="en">
@@ -34,7 +34,7 @@ DASHBOARD_HTML = """
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-6 mb-8 gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Gemstones Hub Monitor</h1>
-                <p class="text-slate-400 text-sm mt-1">Memantau status akun dan infrastruktur cloudphone secara real-time</p>
+                <p class="text-slate-400 text-sm mt-1">Sistem backend sekarang didukung oleh Supabase PostgreSQL</p>
             </div>
             <div class="bg-slate-800/50 backdrop-blur px-4 py-2 rounded-xl border border-slate-700/50 text-sm flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -58,7 +58,7 @@ DASHBOARD_HTML = """
         </div>
 
         <div id="accounts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div class="col-span-full text-center py-12 text-slate-500">Memuat data dari server...</div>
+            <div class="col-span-full text-center py-12 text-slate-500">Memuat data dari Supabase...</div>
         </div>
     </div>
 
@@ -76,7 +76,7 @@ DASHBOARD_HTML = """
                 grid.innerHTML = '';
 
                 if (data.accounts.length === 0) {
-                    grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500 bg-slate-800/20 rounded-xl border border-slate-800">Belum ada akun yang terhubung. Jalankan script di Roblox Executor.</div>`;
+                    grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500 bg-slate-800/20 rounded-xl border border-slate-800">Belum ada data di database Supabase. Jalankan script client.</div>`;
                     return;
                 }
 
@@ -106,11 +106,9 @@ DASHBOARD_HTML = """
                 });
 
             } catch (err) {
-                console.error("Gagal memperbarui status dashboard:", err);
+                console.error("Gagal update data:", err);
             }
         }
-
-        // Jalankan fetch pertama kali dan buat interval refresh tiap 5 detik
         fetchStatus();
         setInterval(fetchStatus, 5000);
     </script>
@@ -118,51 +116,55 @@ DASHBOARD_HTML = """
 </html>
 """
 
-# 1. Router Utama: Menampilkan Web Dashboard
 @app.route('/')
 def dashboard():
     return render_template_string(DASHBOARD_HTML)
 
-# 2. Endpoint API: Menerima Sinyal dari Roblox Client (Auto-detect nama dari body)
+# Endpoint Menerima Data dari Roblox
 @app.route('/api/ping', methods=['POST'])
 def ping():
-    if not db:
-        return jsonify({"status": "error", "message": "Database belum tersambung!"}), 500
-    
     data = request.json or {}
     account_name = data.get("account_name")
-    device_note = data.get("device_note", "Default Device")
+    device_note = data.get("device_note", "Unknown Device")
     
     if not account_name:
-        return jsonify({"status": "error", "message": "Nama akun tidak terdeteksi!"}), 400
+        return jsonify({"status": "error", "message": "Nama akun kosong"}), 400
     
     current_time = int(time.time())
-    db.hset("roblox_heartbeats", account_name, f"{current_time}|{device_note}")
-    return jsonify({"status": "success", "account": account_name})
+    
+    try:
+        # Menyimpan atau menimpa data berdasarkan account_name (Upsert)
+        supabase.table('roblox_heartbeats').upsert({
+            "account_name": account_name,
+            "device_note": device_note,
+            "last_seen": current_time
+        }).execute()
+        
+        return jsonify({"status": "success", "message": f"Ping sukses untuk {account_name}"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-# 3. Endpoint API JSON: Dipakai oleh Dashboard Frontend untuk update data berkala
+# Endpoint Data Mentah untuk Dashboard Frontend
 @app.route('/api/status-json', methods=['GET'])
 def status_json():
-    if not db:
-        return jsonify({"accounts": [], "total": 0, "online": 0, "offline": 0})
-        
-    current_time = int(time.time())
-    all_raw_data = db.hgetall("roblox_heartbeats")
+    try:
+        response = supabase.table('roblox_heartbeats').select("*").execute()
+        all_raw_data = response.data
+    except Exception as e:
+        return jsonify({"accounts": [], "total": 0, "online": 0, "offline": 0, "error": str(e)})
     
+    current_time = int(time.time())
     accounts_list = []
     online_count = 0
     offline_count = 0
     
-    for account, val in all_raw_data.items():
-        try:
-            last_ping_str, device_note = val.split("|", 1)
-            last_ping = int(last_ping_str)
-        except ValueError:
-            continue
-            
+    for row in all_raw_data:
+        account = row.get("account_name")
+        device_note = row.get("device_note")
+        last_ping = int(row.get("last_seen", 0))
+        
         time_diff = current_time - last_ping
         
-        # Penentuan Status Akun
         if time_diff <= TIMEOUT_THRESHOLD:
             status = "ONLINE"
             online_count += 1
@@ -170,7 +172,6 @@ def status_json():
         else:
             status = "OFFLINE"
             offline_count += 1
-            # Hitung waktu mundur pemutusan koneksi
             mins = time_diff // 60
             if mins == 0:
                 last_seen_text = f"{time_diff} detik lalu"
@@ -186,7 +187,6 @@ def status_json():
             "last_seen": last_seen_text
         })
         
-    # Urutkan agar akun yang ONLINE berada di baris paling atas
     accounts_list.sort(key=lambda x: x['status'], reverse=False)
         
     return jsonify({
@@ -195,4 +195,4 @@ def status_json():
         "online": online_count,
         "offline": offline_count
     })
-  
+    
