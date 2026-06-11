@@ -1,17 +1,20 @@
 import time
+import requests
 from flask import Flask, request, jsonify, render_template_string
-from supabase import create_client, Client
 
 app = Flask(__name__)
 
-# ==================== CONFIGURATION (DEVELOPMENT ONLY) ====================
-# Taruh link dan anon key public Supabase kamu di bawah ini:
-SUPABASE_URL = "https://lgnzuhfangjeqbosquaa.supabase.co" 
+# ==================== CONFIGURATION ====================
+SUPABASE_URL = "https://lgnzuhfangjeqbosquaa.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxnbnp1aGZhbmdqZXFib3NxdWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExODY4MzUsImV4cCI6MjA5Njc2MjgzNX0.-9i4JDnFweYUjGCTRJ0-cuhOAXpl97pIDarO3NvSV-s"
-# ==========================================================================
 
-# Inisialisasi client Supabase
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Headers standar untuk komunikasi REST API dengan Supabase
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json"
+}
+# =======================================================
 
 TIMEOUT_THRESHOLD = 45 
 
@@ -34,7 +37,7 @@ DASHBOARD_HTML = """
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-6 mb-8 gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Gemstones Hub Monitor</h1>
-                <p class="text-slate-400 text-sm mt-1">Sistem backend sekarang didukung oleh Supabase PostgreSQL</p>
+                <p class="text-slate-400 text-sm mt-1">Sistem backend sekarang didukung oleh Supabase REST API</p>
             </div>
             <div class="bg-slate-800/50 backdrop-blur px-4 py-2 rounded-xl border border-slate-700/50 text-sm flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -75,7 +78,7 @@ DASHBOARD_HTML = """
                 const grid = document.getElementById('accounts-grid');
                 grid.innerHTML = '';
 
-                if (data.accounts.length === 0) {
+                if (!data.accounts || data.accounts.length === 0) {
                     grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500 bg-slate-800/20 rounded-xl border border-slate-800">Belum ada data di database Supabase. Jalankan script client.</div>`;
                     return;
                 }
@@ -132,24 +135,42 @@ def ping():
     
     current_time = int(time.time())
     
+    # URL Tabel Supabase
+    url = f"{SUPABASE_URL}/rest/v1/roblox_heartbeats"
+    
+    # Tambahan Header untuk perintah Upsert (timpa data kalau sudah ada)
+    upsert_headers = HEADERS.copy()
+    upsert_headers["Prefer"] = "resolution=merge-duplicates"
+    
+    payload = {
+        "account_name": account_name,
+        "device_note": device_note,
+        "last_seen": current_time
+    }
+    
     try:
-        # Menyimpan atau menimpa data berdasarkan account_name (Upsert)
-        supabase.table('roblox_heartbeats').upsert({
-            "account_name": account_name,
-            "device_note": device_note,
-            "last_seen": current_time
-        }).execute()
+        # Kirim data ke Supabase menggunakan POST request
+        res = requests.post(url, headers=upsert_headers, json=payload)
         
-        return jsonify({"status": "success", "message": f"Ping sukses untuk {account_name}"})
+        if res.status_code in [200, 201]:
+            return jsonify({"status": "success", "message": f"Ping sukses untuk {account_name}"})
+        else:
+            return jsonify({"status": "error", "message": res.text}), res.status_code
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # Endpoint Data Mentah untuk Dashboard Frontend
 @app.route('/api/status-json', methods=['GET'])
 def status_json():
+    url = f"{SUPABASE_URL}/rest/v1/roblox_heartbeats"
+    
     try:
-        response = supabase.table('roblox_heartbeats').select("*").execute()
-        all_raw_data = response.data
+        # Tarik data dari Supabase menggunakan GET request
+        res = requests.get(url, headers=HEADERS)
+        if res.status_code == 200:
+            all_raw_data = res.json()
+        else:
+            return jsonify({"accounts": [], "total": 0, "online": 0, "offline": 0, "error": res.text})
     except Exception as e:
         return jsonify({"accounts": [], "total": 0, "online": 0, "offline": 0, "error": str(e)})
     
