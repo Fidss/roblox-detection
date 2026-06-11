@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Gemstones Nebula | Quantum Monitor</title>
+    <!-- Tailwind + Font Awesome + GSAP + Anime.js + SweetAlert2 + Particles.js -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            background: radial-gradient(circle at 10% 20%, rgba(5, 15, 30, 1) 0%, rgba(0, 0, 0, 0.95) 100%);
+            min-height: 100vh;
+        }
+        #particles-js {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .glass-card {
+            background: rgba(15, 25, 45, 0.45);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(66, 153, 225, 0.2);
+            border-radius: 2rem;
+            transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+        .glass-card:hover {
+            border-color: rgba(96, 165, 250, 0.5);
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(66, 153, 225, 0.2) inset;
+        }
+        .stat-pulse {
+            animation: softGlow 2s infinite alternate;
+        }
+        @keyframes softGlow {
+            0% { box-shadow: 0 0 2px rgba(59,130,246,0.2); }
+            100% { box-shadow: 0 0 18px rgba(59,130,246,0.4); }
+        }
+        .accent-gradient {
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .card-enter {
+            opacity: 0;
+            transform: translateY(30px) scale(0.96);
+        }
+        /* custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d3a5e;
+            border-radius: 10px;
+        }
+        .shine-effect {
+            position: relative;
+            overflow: hidden;
+        }
+        .shine-effect::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -60%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(115deg, rgba(255,255,255,0) 10%, rgba(255,255,255,0.08) 30%, rgba(255,255,255,0) 50%);
+            transform: rotate(25deg);
+            animation: shine 8s infinite;
+            pointer-events: none;
+        }
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(25deg); }
+            20% { transform: translateX(100%) rotate(25deg); }
+            100% { transform: translateX(100%) rotate(25deg); }
+        }
+        .online-badge {
+            background: rgba(16, 185, 129, 0.15);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+            color: #34d399;
+        }
+        .offline-badge {
+            background: rgba(148, 163, 184, 0.15);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(100, 116, 139, 0.4);
+            color: #94a3b8;
+        }
+        .floating-bg {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(56,189,248,0.2) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            filter: blur(50px);
+            z-index: -1;
+        }
+        button, .card-action {
+            transition: all 0.2s ease;
+        }
+        button:active {
+            transform: scale(0.96);
+        }
+    </style>
+</head>
+<body class="relative text-slate-100">
+
+    <div id="particles-js"></div>
+    <div class="floating-bg top-20 -left-20"></div>
+    <div class="floating-bg bottom-20 right-0 w-[400px] h-[400px] bg-indigo-500/10"></div>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-5 py-8 md:py-10">
+        <!-- Header section with animated elements -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-5 border-b border-white/10 pb-7">
+            <div class="animate-fade-in" id="hero-text">
+                <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight">
+                    <span class="bg-gradient-to-r from-indigo-300 via-blue-400 to-cyan-300 bg-clip-text text-transparent">GEMSTONES</span>
+                    <span class="text-white/70"> NEBULA</span>
+                </h1>
+                <div class="flex items-center gap-3 mt-2">
+                    <div class="h-1 w-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"></div>
+                    <p class="text-slate-300 text-sm font-medium tracking-wide">Quantum sync · realtime constellation</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4 bg-black/20 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/10">
+                <div class="relative">
+                    <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full absolute -top-0.5 -right-0.5 animate-ping"></span>
+                    <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full absolute -top-0.5 -right-0.5"></span>
+                    <i class="fa-solid fa-satellite-dish text-cyan-400 text-lg"></i>
+                </div>
+                <span class="text-sm text-slate-200">Live <span id="live-status-badge" class="font-bold text-emerald-400">ACTIVE</span></span>
+                <div class="w-px h-4 bg-white/20"></div>
+                <i class="fa-regular fa-clock text-slate-400 text-xs"></i>
+                <span class="text-xs text-slate-300" id="live-timestamp"></span>
+            </div>
+        </div>
+
+        <!-- Statistics cards with glassmorphism -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-12">
+            <div class="glass-card p-5 flex items-center justify-between transition-all duration-300 card-enter" data-delay="0.05">
+                <div>
+                    <p class="text-sm uppercase tracking-wider text-slate-400 font-semibold">Total Nodes</p>
+                    <p id="stat-total" class="text-4xl font-black mt-1 text-white">0</p>
+                </div>
+                <div class="h-12 w-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-300 text-xl">
+                    <i class="fa-regular fa-gem"></i>
+                </div>
+            </div>
+            <div class="glass-card p-5 flex items-center justify-between transition-all duration-300 card-enter" data-delay="0.1">
+                <div>
+                    <p class="text-sm uppercase tracking-wider text-slate-400 font-semibold">Active Connections</p>
+                    <p id="stat-online" class="text-4xl font-black mt-1 text-emerald-400">0</p>
+                </div>
+                <div class="h-12 w-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-300 text-xl">
+                    <i class="fa-regular fa-circle-check"></i>
+                </div>
+            </div>
+            <div class="glass-card p-5 flex items-center justify-between transition-all duration-300 card-enter" data-delay="0.15">
+                <div>
+                    <p class="text-sm uppercase tracking-wider text-slate-400 font-semibold">Dormant Cores</p>
+                    <p id="stat-offline" class="text-4xl font-black mt-1 text-rose-400">0</p>
+                </div>
+                <div class="h-12 w-12 rounded-2xl bg-rose-500/20 flex items-center justify-center text-rose-300 text-xl">
+                    <i class="fa-regular fa-moon"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard grid with enhanced animations -->
+        <div class="relative">
+            <div class="flex justify-between items-center mb-4 px-1">
+                <h2 class="text-xl font-semibold flex items-center gap-2"><i class="fa-solid fa-crystal text-indigo-400"></i> Constellation map</h2>
+                <span class="text-xs text-slate-400 bg-slate-800/30 px-3 py-1 rounded-full"><i class="fa-regular fa-bell"></i> Auto-sync: 5s</span>
+            </div>
+            <div id="accounts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="col-span-full flex justify-center items-center py-20">
+                    <div class="loader text-slate-400 flex flex-col items-center gap-2">
+                        <i class="fa-solid fa-spinner fa-pulse text-3xl text-indigo-400"></i>
+                        <span>Loading stellar data ...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // SweetAlert & GSAP + ParticleJS init
+        particlesJS("particles-js", {
+            "particles": {
+                "number": { "value": 65, "density": { "enable": true, "value_area": 800 } },
+                "color": { "value": "#3b82f6" },
+                "shape": { "type": "circle" },
+                "opacity": { "value": 0.2, "random": true },
+                "size": { "value": 2, "random": true },
+                "line_linked": { "enable": true, "distance": 120, "color": "#4f46e5", "opacity": 0.15, "width": 1 },
+                "move": { "enable": true, "speed": 1.2, "direction": "none", "random": true, "straight": false, "out_mode": "out" }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": { "onhover": { "enable": true, "mode": "repulse" }, "resize": true }
+            }
+        });
+
+        // Helper for date
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('live-timestamp').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit', second:'2-digit' });
+        }
+        setInterval(updateTimestamp, 1000);
+        updateTimestamp();
+
+        // Enhanced Modal approach (SweetAlert2 for Edit + Delete)
+        async function deleteAccountWithSweet(name) {
+            const result = await Swal.fire({
+                title: `<span class="text-slate-200">Purge <strong class="text-rose-400">${escapeHtml(name)}</strong> ?</span>`,
+                html: `<div class="text-slate-300 text-sm">This action is irreversible. The node will vanish from the nebula.</div>`,
+                icon: 'warning',
+                background: '#0f172ad9',
+                backdrop: `rgba(0,0,0,0.7)`,
+                color: '#f1f5f9',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#334155',
+                confirmButtonText: '<i class="fa-regular fa-trash-can mr-2"></i> Yes, delete',
+                cancelButtonText: 'Cancel',
+                customClass: {
+                    popup: 'rounded-2xl border border-rose-500/30 backdrop-blur-md',
+                    title: 'text-lg font-bold'
+                }
+            });
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch('/api/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ account_name: name })
+                    });
+                    const json = await res.json();
+                    if (json.status === 'success') {
+                        Swal.fire({
+                            title: 'Deleted!',
+                            text: `Account ${name} removed from records.`,
+                            icon: 'success',
+                            background: '#0f172a',
+                            color: '#cbd5e1',
+                            toast: true,
+                            timer: 1800,
+                            showConfirmButton: false,
+                            position: 'top-end'
+                        });
+                        fetchStatus();
+                    } else {
+                        throw new Error(json.message || 'Delete failed');
+                    }
+                } catch (err) {
+                    Swal.fire('Error', 'Could not delete account: ' + err.message, 'error');
+                }
+            }
+        }
+
+        async function editDeviceWithSweet(name, currentNote) {
+            const { value: newNote } = await Swal.fire({
+                title: `<span class="text-slate-200">Edit device note for</span> <span class="text-cyan-300 font-bold">${escapeHtml(name)}</span>`,
+                input: 'text',
+                inputLabel: 'Device Identifier / Note',
+                inputValue: currentNote,
+                background: '#0f172ad9',
+                backdrop: `rgba(0,0,0,0.6)`,
+                color: '#e2e8f0',
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6',
+                cancelButtonColor: '#475569',
+                confirmButtonText: '<i class="fa-regular fa-pen-to-square mr-2"></i> Update',
+                inputPlaceholder: 'e.g., Xiaomi Redmi / Emulator',
+                customClass: { popup: 'rounded-2xl border border-blue-500/30' },
+                preConfirm: (val) => {
+                    if (!val || val.trim() === '') return Swal.showValidationMessage('Note cannot be empty');
+                    return val.trim();
+                }
+            });
+            if (newNote && newNote !== currentNote) {
+                try {
+                    const res = await fetch('/api/edit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ account_name: name, new_note: newNote })
+                    });
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Updated',
+                            text: `Device note changed to "${newNote}"`,
+                            background: '#0f172a',
+                            toast: true,
+                            timer: 1700,
+                            showConfirmButton: false,
+                            position: 'top-end'
+                        });
+                        fetchStatus();
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (err) {
+                    Swal.fire('Update failed', err.message, 'error');
+                }
+            } else if (newNote === currentNote) {
+                Swal.fire({ icon: 'info', text: 'No changes made', background: '#0f172a', toast: true, timer: 1200 });
+            }
+        }
+
+        function escapeHtml(str) {
+            if(!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+                return c;
+            });
+        }
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status-json');
+                const data = await res.json();
+                // Update counters with animation
+                gsap.to('#stat-total', { duration: 0.6, innerText: data.total, snap: { innerText: 1 }, ease: "power2.out" });
+                gsap.to('#stat-online', { duration: 0.6, innerText: data.online, snap: { innerText: 1 }, ease: "power2.out" });
+                gsap.to('#stat-offline', { duration: 0.6, innerText: data.offline, snap: { innerText: 1 }, ease: "power2.out" });
+                
+                const grid = document.getElementById('accounts-grid');
+                if (!data.accounts || data.accounts.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-16 glass-card p-8 gap-3">
+                        <i class="fa-regular fa-eye-slash text-4xl text-indigo-400/50"></i>
+                        <p class="text-slate-300 font-medium">No constellation data found.</p>
+                        <p class="text-xs text-slate-500">Waiting for heartbeat signals from clients...</p>
+                    </div>`;
+                    return;
+                }
+                
+                let cardsHtml = '';
+                data.accounts.forEach((acc, idx) => {
+                    const isOnline = acc.status === 'ONLINE';
+                    const statusClass = isOnline ? 'online-badge' : 'offline-badge';
+                    const statusIcon = isOnline ? '<i class="fa-solid fa-plug text-emerald-400 text-xs mr-1"></i>' : '<i class="fa-regular fa-clock text-slate-400 text-xs mr-1"></i>';
+                    const statusText = isOnline ? 'ACTIVE' : 'SLEEPING';
+                    const borderAccent = isOnline ? 'border-l-4 border-l-emerald-500' : '';
+                    const safeName = escapeHtml(acc.name);
+                    const safeNote = escapeHtml(acc.note || 'Unlabeled device');
+                    const lastSeenEscaped = escapeHtml(acc.last_seen);
+                    
+                    cardsHtml += `
+                        <div class="glass-card p-5 transition-all duration-500 hover:-translate-y-1 shine-effect ${borderAccent} card-item" data-idx="${idx}">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="overflow-hidden flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fa-regular fa-user-astronaut text-indigo-300"></i>
+                                        <h3 class="font-bold text-lg text-slate-100 truncate" title="${safeName}">${safeName}</h3>
+                                    </div>
+                                    <div class="flex flex-wrap items-center gap-2 mt-2 bg-slate-900/40 rounded-full py-1 px-2 w-fit">
+                                        <i class="fa-solid fa-microchip text-[11px] text-slate-400"></i>
+                                        <span class="text-xs text-slate-300 max-w-[150px] truncate">${safeNote}</span>
+                                        <button class="edit-device-btn text-slate-400 hover:text-sky-400 transition text-xs ml-1" data-name="${acc.name.replace(/['"]/g, '\\"')}" data-note="${safeNote.replace(/['"]/g, '\\"')}">
+                                            <i class="fa-regular fa-pen-to-square"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-end gap-2">
+                                    <span class="text-[11px] font-semibold px-3 py-1 rounded-full ${statusClass} backdrop-blur-sm flex items-center gap-1">
+                                        ${statusIcon} ${statusText}
+                                    </span>
+                                    <button class="delete-acc-btn text-slate-500 hover:text-rose-400 transition-all text-sm" data-name="${acc.name.replace(/['"]/g, '\\"')}">
+                                        <i class="fa-regular fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-white/10 flex justify-between text-xs">
+                                <span class="text-slate-400"><i class="fa-regular fa-calendar"></i> last heartbeat</span>
+                                <span class="text-slate-300 font-mono">${lastSeenEscaped}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                grid.innerHTML = cardsHtml;
+                
+                // Attach event listeners dynamically
+                document.querySelectorAll('.delete-acc-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const name = btn.getAttribute('data-name');
+                        if (name) deleteAccountWithSweet(name);
+                    });
+                });
+                document.querySelectorAll('.edit-device-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const name = btn.getAttribute('data-name');
+                        const note = btn.getAttribute('data-note') || '';
+                        if (name) editDeviceWithSweet(name, note);
+                    });
+                });
+                
+                // Animate each card with stagger GSAP
+                gsap.fromTo('.card-item', 
+                    { opacity: 0, y: 40, scale: 0.95 },
+                    { opacity: 1, y: 0, scale: 1, duration: 0.5, stagger: 0.05, ease: "back.out(0.6)", clearProps: "all" }
+                );
+                
+            } catch (err) {
+                console.error("FETCH ERROR", err);
+                document.getElementById('accounts-grid').innerHTML = `<div class="col-span-full glass-card p-6 text-center text-rose-300"><i class="fa-regular fa-circle-exclamation mr-2"></i> Network anomaly: ${err.message}</div>`;
+            }
+        }
+        
+        // initial animated entrance for stat cards
+        function initialEntrance() {
+            gsap.fromTo('.card-enter', 
+                { opacity: 0, y: 40, scale: 0.9 }, 
+                { opacity: 1, y: 0, scale: 1, duration: 0.7, stagger: 0.1, ease: "elastic.out(1, 0.5)" }
+            );
+            gsap.fromTo('#hero-text', { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.8, ease: "power3.out" });
+            gsap.fromTo('.flex.items-center.gap-4.bg-black\\/20', { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.6, delay: 0.2 });
+        }
+        
+        fetchStatus();
+        initialEntrance();
+        setInterval(fetchStatus, 5000);
+        
+        // Tiny neon cursor trail spark? optional (just for wow)
+        const canvasSpark = document.createElement('canvas');
+        canvasSpark.style.position = 'fixed';
+        canvasSpark.style.pointerEvents = 'none';
+        canvasSpark.style.top = '0';
+        canvasSpark.style.left = '0';
+        canvasSpark.style.width = '100%';
+        canvasSpark.style.height = '100%';
+        canvasSpark.style.zIndex = '9999';
+        canvasSpark.style.opacity = '0.3';
+        document.body.appendChild(canvasSpark);
+        // just subtle effects for elegance, remove or keep.
+        let ctxSpark;
+        try { ctxSpark = canvasSpark.getContext('2d'); } catch(e){}
+        let mouseX = 0, mouseY = 0;
+        document.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; if(ctxSpark) drawTrail(); });
+        function drawTrail() {
+            if(!ctxSpark) return;
+            canvasSpark.width = window.innerWidth;
+            canvasSpark.height = window.innerHeight;
+            ctxSpark.clearRect(0,0,canvasSpark.width, canvasSpark.height);
+            ctxSpark.fillStyle = '#38bdf870';
+            ctxSpark.shadowBlur = 12;
+            ctxSpark.beginPath();
+            ctxSpark.arc(mouseX, mouseY, 6, 0, Math.PI*2);
+            ctxSpark.fill();
+            setTimeout(() => { if(ctxSpark) ctxSpark.clearRect(0,0,canvasSpark.width, canvasSpark.height); }, 60);
+        }
+        window.addEventListener('resize', () => { if(ctxSpark) canvasSpark.width = window.innerWidth; canvasSpark.height = window.innerHeight; });
+    </script>
+</body>
+</html>
